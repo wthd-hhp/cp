@@ -1,0 +1,68 @@
+import os
+import pandas as pd
+import re
+
+from rdkit import Chem
+from rdkit.Chem import SDMolSupplier
+
+Exe_data = pd.read_excel("298.15k下的气态热容.xlsx")
+Exe_data
+Exe_data['CAS'].str.strip()
+Exe_data['CAS']=Exe_data['CAS'].str.strip()
+a = []
+for i in Exe_data["CAS"].values:
+    if "-" in str(i):
+        print(i.strip())
+        a.append(i.strip())
+    else:
+        print(i)
+        a.append(str(i))
+Exe_data["CAS"] = a
+Exe_data["CAS"]
+
+
+def sdf_to_smiles(input_sdf_file, output_smiles_file):
+#     print(input_sdf_file)
+    Exe_value = float(Exe_data[Exe_data['CAS'] == os.path.basename(input_sdf_file)[:-7]]['Cp (J/mol.K)'])
+    # Open the output file in append mode
+    with open(output_smiles_file, 'a') as output_file:
+        # Use SDMolSupplier to read the SDF file
+        suppl = SDMolSupplier(input_sdf_file,strictParsing=False)
+        # Iterate through each molecule in the SDF file
+        for mol in suppl:
+            # Check if the molecule is valid
+            if mol is not None:
+                # Convert the molecule to SMILES format
+                smiles = Chem.MolToSmiles(mol)
+                # Write the SMILES string to the output file
+#                 output_file.write(smiles + '\n')
+#                 output_file.write(f"{smiles},{Exe_value},{os.path.basename(input_sdf_file)[:-7]}\n")  #加CAS
+                output_file.write(f"{smiles},{Exe_value}\n")  #不加加CAS
+            else:
+                print(input_sdf_file)
+                faile.append(input_sdf_file)
+
+faile = []
+# Directory containing SDF files
+sdf_directory = "./SDFdata"
+
+# Output file path
+output_smiles_file = "Cp_output_smiles.txt"
+
+# Open the output file in write mode to clear existing content
+with open(output_smiles_file, 'w') as output_file:
+    output_file.write("smiles,Exe_value\n")  # Clear existing content
+
+# Iterate through each file in the directory
+for file_name in os.listdir(sdf_directory):
+    # Check if the file is an SDF file
+    if file_name.endswith(".sdf"):
+        # Construct the full file path
+        file_path = os.path.join(sdf_directory, file_name)
+        # Convert the SDF file to SMILES and append to output file
+        sdf_to_smiles(file_path, output_smiles_file)
+        
+
+print("Conversion complete.")
+df = pd.read_csv('Cp_output_smiles.txt')
+df.to_csv("Cp_output_smiles.csv", index=False)
