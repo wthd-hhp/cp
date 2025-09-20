@@ -1,0 +1,94 @@
+import chemprop
+from sklearn.metrics import r2_score              #用于模型拟合优度评估
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+arguments = [
+#     '--data_path', 'Data/GEF_output_smiles.csv',
+    '--data_path', 'Cp_output_smiles2611.csv',
+
+    '--dataset_type', 'regression',
+    '--save_dir', 'Cp_test_checkpoints',
+    '--epochs','500',
+#     '--num_workers', '32',
+#     '--config_path','config-500.json', 
+    '--save_smiles_splits',
+    '--split_sizes', '0.7', '0.15', '0.15',
+    '--quiet' ,
+    '--seed','43',
+]
+
+args = chemprop.args.TrainArgs().parse_args(arguments)
+mean_score, std_score = chemprop.train.cross_validate(args=args, train_func=chemprop.train.run_training)
+
+arguments = [
+    '--test_path', 'Cp_test_checkpoints/fold_0/test_smiles.csv',
+    '--preds_path', 'test_preds_red.csv',
+    '--checkpoint_dir','Cp_test_checkpoints'
+
+]
+
+args = chemprop.args.PredictArgs().parse_args(arguments)
+preds = chemprop.train.make_predictions(args=args)
+
+import pandas as pd
+import numpy as np
+
+df = pd.read_csv("Cp_test_checkpoints/fold_0/test_full.csv")
+df["preds"] = [x[0] for x in preds]
+df
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+print(np.round(r2_score(df['Exe_value'],df['preds']),3))
+
+# 生成一些示例数据，实验值和预测值
+experimental_values = df['Exe_value']
+predicted_values = df['preds']
+
+# 创建画布和坐标轴
+fig, ax = plt.subplots()
+
+# 设置散点图
+ax.scatter(experimental_values, predicted_values)
+
+# 获取实验值和预测值的范围
+min_val = min(np.min(experimental_values), np.min(predicted_values))
+max_val = max(np.max(experimental_values), np.max(predicted_values))
+
+# 设置坐标轴范围和间隔一致
+ax.set_xlim(min_val, max_val)
+ax.set_ylim(min_val, max_val)
+ax.set_xticks(np.arange(min_val, max_val+1,200))
+ax.set_yticks(np.arange(min_val, max_val+1,200))
+
+# 添加对角线辅助线
+ax.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='--')
+
+# 添加标题和坐标轴标签
+ax.set_title('Experimental vs. Predicted Values')
+ax.set_xlabel('Experimental Values')
+ax.set_ylabel('Predicted Values')
+
+# 设置坐标轴比例一致，以确保画出的是正方形散点图
+ax.set_aspect('equal', adjustable='box')
+
+fig.set_size_inches(6, 6)
+
+# 显示图形
+plt.grid(True)
+plt.show()
+
+Train_RMSE = np.round(np.sqrt(mean_squared_error(df_train["Exe_value"],df_train["preds"])),3)
+Train_MAE = np.round(mean_absolute_error(df_train["Exe_value"],df_train["preds"]),3)
+Test_RMSE = np.round(np.sqrt(mean_squared_error(df_test["Exe_value"],df_test["preds"])),3)
+Test_MAE = np.round(mean_absolute_error(df_test["Exe_value"],df_test["preds"]),3)
+
+print("Train_RMSE",Train_RMSE)
+print("Train_MAE",Train_MAE)
+print("Test_RMSE",Test_RMSE)
+print("Test_MAE",Test_MAE)
+df_train.to_excel('Cp-Graph-network.xlsx')
+
